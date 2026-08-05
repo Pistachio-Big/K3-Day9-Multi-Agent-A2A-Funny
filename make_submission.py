@@ -1,5 +1,5 @@
 """
-Tạo file zip nộp bài — CHỈ chứa output/ (đúng 50 JSON EC_001..EC_050).
+Tạo file zip nộp bài — chứa đúng output/EC_001.json .. output/EC_050.json (50 JSON).
 
 Tuân thủ README mục 9:
   - 9.2: zip chỉ chứa folder output/, KHÔNG kèm source code, .env, file audit.
@@ -35,10 +35,10 @@ def main(argv: list[str]) -> int:
 
     with zipfile.ZipFile(zip_name, "w", zipfile.ZIP_DEFLATED) as zf:
         for f in files:
-            # arcname không kèm đường dẫn tuyệt đối; đặt phẳng theo yêu cầu chấm
-            zf.write(f, arcname=f.name)
+            # arcname giữ prefix output/ -> zip chứa output/EC_001.json..output/EC_050.json
+            zf.write(f, arcname=f"output/{f.name}")
 
-    print(f"[OK] {zip_name}: {len(files)} file JSON (EC_001..EC_050). Không kèm source/.env/log.")
+    print(f"[OK] {zip_name}: {len(files)} file JSON (output/EC_001..EC_050.json). Không kèm source/.env/log.")
     return 0
 
 
