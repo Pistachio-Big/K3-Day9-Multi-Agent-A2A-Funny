@@ -1,23 +1,23 @@
 {
   "team": "FUNNY",
   "framework": "custom-a2a",
-  "provider": "groq",
-  "use_llm": false,
+  "provider": "openrouter",
+  "use_llm": true,
   "agent_models": {
-    "coordinator": "llama-3.1-8b-instant",
-    "order_seller_agent": "llama-3.1-8b-instant",
-    "delivery_agent": "llama-3.1-8b-instant",
-    "payment_agent": "llama-3.1-8b-instant",
-    "policy_agent": "llama-3.1-8b-instant",
-    "verifier_agent": "llama-3.1-8b-instant"
+    "coordinator": "meta-llama/llama-3.1-8b-instruct",
+    "order_seller_agent": "meta-llama/llama-3.1-8b-instruct",
+    "delivery_agent": "meta-llama/llama-3.1-8b-instruct",
+    "payment_agent": "meta-llama/llama-3.1-8b-instruct",
+    "policy_agent": "meta-llama/llama-3.1-8b-instruct",
+    "verifier_agent": "meta-llama/llama-3.1-8b-instruct"
   },
   "parameter_size_constraint": "<=10B per agent",
   "policy_version": "EC_POLICY_V1",
   "runtime": {
-    "python": "3.13.10",
-    "platform": "Windows-11-10.0.26200-SP0"
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.26200-SP0"
   },
   "num_cases": 50,
-  "elapsed_seconds": 3.17,
-  "generated_at": "2026-08-05T04:17:30.456154+00:00"
+  "elapsed_seconds": 2.82,
+  "generated_at": "2026-08-05T04:09:27.462521+00:00"
 }
