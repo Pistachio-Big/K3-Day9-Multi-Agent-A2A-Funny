@@ -93,6 +93,10 @@ class CaseContext:
     verified: bool = False
     notes: list[str] = field(default_factory=list)
 
+    # --- điều khiển Critic-Repair loop (Coordinator/Verifier dùng) ---
+    repair_count: int = 0            # số vòng repair đã chạy
+    force_deterministic: bool = False  # Verifier bật khi phát hiện mâu thuẫn -> Policy chỉ dùng Path A
+
 
 # ---------------------------------------------------------------------------
 # Output cuối (đúng README mục 6)
