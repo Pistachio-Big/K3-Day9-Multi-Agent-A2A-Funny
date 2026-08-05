@@ -49,7 +49,7 @@ class PaymentAgent(BaseAgent):
         if not pf.reconciled and pf.num_payment_rows:
             ctx.notes.append(f"payment_not_reconciled(diff={round(pf.payment_total_brl - expected, 2)})")
 
-        return self.result("coordinator", "facts_ready", ctx,
+        return [self.emit("coordinator", "facts_ready", ctx,
                            payment_total=pf.payment_total_brl,
                            reconciled=pf.reconciled,
-                           num_payment_rows=pf.num_payment_rows)
+                           num_payment_rows=pf.num_payment_rows)]

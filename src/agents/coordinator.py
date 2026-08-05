@@ -41,8 +41,9 @@ class Coordinator:
         self.policy = PolicyAgent()
         self.verifier = VerifierAgent()
 
-    def _log(self, ctx: CaseContext, sender: str, recipient: str, intent: str, **payload) -> None:
-        self.tracer.log(ctx.case_id, sender, recipient, intent, payload)
+    def _log(self, ctx: CaseContext, sender: str, recipient: str, intent: str,
+             payload: dict[str, Any] | None = None) -> None:
+        self.tracer.log(ctx.case_id, sender, recipient, intent, payload or {})
 
     def run_case(self, case: dict[str, Any]) -> dict[str, Any]:
         ctx = CaseContext(
@@ -55,9 +56,10 @@ class Coordinator:
 
         # 1) Order & Seller ---------------------------------------------------
         self._log(ctx, self.name, "order_seller_agent", "investigate",
-                  claimed_order_id=ctx.claimed_order_id)
-        msg = self.order_seller.process(ctx)
-        self._log(ctx, msg.sender, self.name, msg.intent, **msg.payload)
+                  {"claimed_order_id": ctx.claimed_order_id})
+        msgs = self.order_seller.process(ctx)
+        for m in msgs:
+            self._log(ctx, m.sender, m.recipient, m.intent, m.payload)
 
         # 2) FAN-OUT song song: Delivery ∥ Payment ----------------------------
         self._log(ctx, self.name, "delivery_agent", "dispatch")
@@ -65,29 +67,34 @@ class Coordinator:
         with ThreadPoolExecutor(max_workers=2) as ex:
             f_del = ex.submit(self.delivery.process, ctx)
             f_pay = ex.submit(self.payment.process, ctx)
-            m_del, m_pay = f_del.result(), f_pay.result()
-        self._log(ctx, m_del.sender, self.name, m_del.intent, **m_del.payload)
-        self._log(ctx, m_pay.sender, self.name, m_pay.intent, **m_pay.payload)
+            msgs_del = f_del.result()
+            msgs_pay = f_pay.result()
+        for m in msgs_del:
+            self._log(ctx, m.sender, m.recipient, m.intent, m.payload)
+        for m in msgs_pay:
+            self._log(ctx, m.sender, m.recipient, m.intent, m.payload)
 
         # 3-4) Policy adjudication + Critic-Repair loop ------------------------
         for _ in range(MAX_ADJUDICATION_ROUNDS):
             self._log(ctx, self.name, "policy_agent", "adjudicate")
-            m_pol = self.policy.process(ctx)
-            self._log(ctx, m_pol.sender, self.name, m_pol.intent, **m_pol.payload)
+            msgs_pol = self.policy.process(ctx)
+            for m in msgs_pol:
+                self._log(ctx, m.sender, m.recipient, m.intent, m.payload)
 
             self._log(ctx, self.name, "verifier_agent", "verify")
-            m_ver = self.verifier.process(ctx)
-            self._log(ctx, m_ver.sender, m_ver.recipient, m_ver.intent, **m_ver.payload)
+            msgs_ver = self.verifier.process(ctx)
+            for m in msgs_ver:
+                self._log(ctx, m.sender, m.recipient, m.intent, m.payload)
 
-            if m_ver.intent == "final":
+            # Lấy intent từ message đầu tiên của verifier
+            if msgs_ver and msgs_ver[0].intent == "final":
                 break
             # intent == "repair": quay lại policy (đã bật force_deterministic trong ctx)
 
         # 5) Assemble ---------------------------------------------------------
         output = build_output(ctx)
         self._log(ctx, self.name, "output", "assembled",
-                  primary_issue=output["assessment"]["primary_issue"],
-                  case_status=output["assessment"]["case_status"],
-                  refund=output["financial_resolution"]["recommended_refund_brl"],
-                  repairs=ctx.repair_count)
+                  {"primary_issue": output["assessment"]["primary_issue"],
+                   "case_status": output["assessment"]["case_status"],
+                   "refund": output["financial_resolution"]["recommended_refund_brl"]})
         return output

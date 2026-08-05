@@ -14,10 +14,10 @@
   "parameter_size_constraint": "<=10B per agent",
   "policy_version": "EC_POLICY_V1",
   "runtime": {
-    "python": "3.11.9",
-    "platform": "Windows-10-10.0.26200-SP0"
+    "python": "3.13.9",
+    "platform": "macOS-15.7.7-arm64-arm-64bit-Mach-O"
   },
   "num_cases": 50,
-  "elapsed_seconds": 2.82,
-  "generated_at": "2026-08-05T04:09:27.462521+00:00"
+  "elapsed_seconds": 1.44,
+  "generated_at": "2026-08-05T04:48:31.513848+00:00"
 }

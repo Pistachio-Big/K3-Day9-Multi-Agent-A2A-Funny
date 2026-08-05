@@ -54,14 +54,14 @@ class VerifierAgent(BaseAgent):
             ctx.notes.append(
                 f"repair#{ctx.repair_count}:refund={dec.recommended_refund_brl} != expected={expected}"
             )
-            return self.result("policy_agent", "repair", ctx,
-                               reason="refund_mismatch", expected=expected)
+            return [self.emit("policy_agent", "repair", ctx,
+                               reason="refund_mismatch", expected=expected)]
 
         if mismatch:
             ctx.notes.append("repair_exhausted_refund_mismatch")
 
         ctx.verified = True
-        return self.result("coordinator", "final", ctx, evidence_count=len(ctx.evidence_ids))
+        return [self.emit("coordinator", "final", ctx, evidence_count=len(ctx.evidence_ids))]
 
     # ------------------------------------------------------------------ #
     def _expected_refund(self, ctx: CaseContext) -> Optional[float]:

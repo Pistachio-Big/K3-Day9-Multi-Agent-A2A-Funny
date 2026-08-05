@@ -35,7 +35,7 @@ class OrderSellerAgent(BaseAgent):
         if order is None:
             of.found = False
             ctx.notes.append("order_not_found")
-            return self.result("coordinator", "facts_ready", ctx, found=False)
+            return [self.emit("coordinator", "facts_ready", ctx, found=False)]
 
         of.found = True
         of.order_id = order["order_id"]
@@ -76,5 +76,5 @@ class OrderSellerAgent(BaseAgent):
         if not of.items:
             ctx.notes.append("order_has_no_item_row")
 
-        return self.result("coordinator", "facts_ready", ctx,
-                           found=True, order_status=of.order_status, num_items=len(of.items))
+        return [self.emit("coordinator", "facts_ready", ctx,
+                           found=True, order_status=of.order_status, num_items=len(of.items))]

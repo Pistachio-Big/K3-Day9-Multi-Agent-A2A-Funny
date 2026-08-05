@@ -46,7 +46,7 @@ class DeliveryAgent(BaseAgent):
         # carrier nhận hàng muộn hơn shipping_limit_date (bất kỳ seller nào)
         df.carrier_after_limit = any(of.seller_handoff_late.values())
 
-        return self.result("coordinator", "facts_ready", ctx,
+        return [self.emit("coordinator", "facts_ready", ctx,
                            delivered=df.delivered,
                            late_vs_estimate=df.late_vs_estimate,
-                           carrier_after_limit=df.carrier_after_limit)
+                           carrier_after_limit=df.carrier_after_limit)]

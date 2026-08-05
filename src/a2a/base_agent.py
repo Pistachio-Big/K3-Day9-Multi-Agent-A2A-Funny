@@ -22,10 +22,10 @@ class BaseAgent(ABC):
     name: str = "base"
 
     @abstractmethod
-    def process(self, ctx: CaseContext, inbox: Optional[A2AMessage] = None) -> A2AMessage:
+    def process(self, ctx: CaseContext) -> list[A2AMessage]:
         ...
 
-    def result(self, recipient: str, intent: str, ctx: CaseContext, **payload) -> A2AMessage:
+    def emit(self, recipient: str, intent: str, ctx: CaseContext, **payload) -> A2AMessage:
         """Tạo message kết quả gửi về Coordinator (hoặc gợi ý bước kế)."""
         return A2AMessage(
             sender=self.name,
