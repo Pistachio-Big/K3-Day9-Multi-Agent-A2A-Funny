@@ -22,6 +22,8 @@ TODO(Phái):
 """
 from __future__ import annotations
 
+from typing import Optional
+
 from ..a2a.base_agent import BaseAgent
 from ..a2a.message import A2AMessage
 from ..schemas import CaseContext
@@ -41,7 +43,7 @@ CAUSE = {
 class PolicyAgent(BaseAgent):
     name = "policy_agent"
 
-    def process(self, msg: A2AMessage, ctx: CaseContext) -> list[A2AMessage]:
+    def process(self, ctx: CaseContext, inbox: Optional[A2AMessage] = None) -> A2AMessage:
         of, df, pf, dec = ctx.order_facts, ctx.delivery_facts, ctx.payment_facts, ctx.decision
         status = (of.order_status or "").lower()
 
@@ -80,9 +82,9 @@ class PolicyAgent(BaseAgent):
 
         self._build_evidence(ctx)
 
-        return [self.emit("verifier_agent", "decision_ready", ctx,
-                          primary_issue=dec.primary_issue,
-                          refund=dec.recommended_refund_brl)]
+        return self.result("coordinator", "decision_ready", ctx,
+                           primary_issue=dec.primary_issue,
+                           refund=dec.recommended_refund_brl)
 
     # ------------------------------------------------------------------ #
     def _set(self, dec, issue, case_status, *, refund, actions, parties, confidence):
