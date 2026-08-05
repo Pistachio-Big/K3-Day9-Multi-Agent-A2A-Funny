@@ -1,16 +1,18 @@
 """
 BaseAgent — lớp cha cho mọi agent.
 
-Contract:
+Contract (kiến trúc mới, Coordinator điều phối):
   - name: định danh agent (khớp key trong config.AGENT_MODELS).
-  - process(msg, ctx) -> list[A2AMessage]: đọc bảng đen `ctx`, làm phần việc của
-    mình, ghi bằng chứng vào `ctx`, rồi trả về message handoff cho agent kế.
+  - process(ctx, inbox) -> A2AMessage: đọc/ghi bảng đen `ctx`, làm phần việc của mình,
+    trả về 1 A2AMessage kết quả (để Coordinator ghi trace & định tuyến bước kế).
 
-Mỗi agent con override `process`. Dùng self.emit(...) để tạo message handoff.
+Coordinator là bên định tuyến (fan-out song song + repair loop), agent chỉ báo kết quả
+qua `result(...)`.
 """
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from ..schemas import CaseContext
 from .message import A2AMessage
@@ -20,10 +22,11 @@ class BaseAgent(ABC):
     name: str = "base"
 
     @abstractmethod
-    def process(self, msg: A2AMessage, ctx: CaseContext) -> list[A2AMessage]:
+    def process(self, ctx: CaseContext, inbox: Optional[A2AMessage] = None) -> A2AMessage:
         ...
 
-    def emit(self, recipient: str, intent: str, ctx: CaseContext, **payload) -> A2AMessage:
+    def result(self, recipient: str, intent: str, ctx: CaseContext, **payload) -> A2AMessage:
+        """Tạo message kết quả gửi về Coordinator (hoặc gợi ý bước kế)."""
         return A2AMessage(
             sender=self.name,
             recipient=recipient,

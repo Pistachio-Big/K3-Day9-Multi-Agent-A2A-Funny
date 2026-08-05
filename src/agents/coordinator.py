@@ -1,24 +1,22 @@
 """
-Coordinator Agent — điều phối & tổng hợp.
+Coordinator Agent — điều phối theo kiến trúc "fan-out + critic-repair".
 
-- Đăng ký các agent, khởi tạo bảng đen CaseContext từ input JSON.
-- Chạy vòng lặp định tuyến A2A: message được chuyển giữa các agent theo `recipient`,
-  mỗi bước được Tracer ghi lại (chứng minh handoff thật).
-- Khi nhận message intent="final", ráp output bằng schemas.build_output.
+Luồng:
+  1. order_seller_agent      : lấy facts đơn/item/seller (phải chạy trước).
+  2. delivery ∥ payment      : FAN-OUT song song (đọc order_facts, ghi slot riêng -> an toàn).
+  3. policy_agent            : dual-path adjudication.
+  4. verifier_agent          : validate + cross-check; nếu 'repair' -> quay lại policy (tối đa 2 vòng).
+  5. assemble output.
 
-Luồng: order_seller -> delivery -> payment -> policy -> verifier -> coordinator(final)
+Mọi bước handoff (kể cả repair) được Tracer ghi vào logging/trace.jsonl -> chứng minh A2A thật.
 
 Owner: Nguyễn Văn Đại (Team Lead).
-
-TODO(Đại):
-  - [baseline đã có] routing loop + tổng hợp.
-  - Có thể thêm bước Coordinator dùng LLM để rà soát chéo trước khi chốt.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from ..a2a.base_agent import BaseAgent
 from ..a2a.message import A2AMessage
 from ..schemas import CaseContext, build_output
 from ..tracing import Tracer
@@ -29,7 +27,7 @@ from .payment_agent import PaymentAgent
 from .policy_agent import PolicyAgent
 from .verifier_agent import VerifierAgent
 
-MAX_HOPS = 50  # chặn vòng lặp vô hạn
+MAX_ADJUDICATION_ROUNDS = 3  # 1 lần đầu + tối đa 2 vòng repair
 
 
 class Coordinator:
@@ -37,14 +35,14 @@ class Coordinator:
 
     def __init__(self, tracer: Tracer) -> None:
         self.tracer = tracer
-        agents: list[BaseAgent] = [
-            OrderSellerAgent(),
-            DeliveryAgent(),
-            PaymentAgent(),
-            PolicyAgent(),
-            VerifierAgent(),
-        ]
-        self.registry: dict[str, BaseAgent] = {a.name: a for a in agents}
+        self.order_seller = OrderSellerAgent()
+        self.delivery = DeliveryAgent()
+        self.payment = PaymentAgent()
+        self.policy = PolicyAgent()
+        self.verifier = VerifierAgent()
+
+    def _log(self, ctx: CaseContext, sender: str, recipient: str, intent: str, **payload) -> None:
+        self.tracer.log(ctx.case_id, sender, recipient, intent, payload)
 
     def run_case(self, case: dict[str, Any]) -> dict[str, Any]:
         ctx = CaseContext(
@@ -55,30 +53,41 @@ class Coordinator:
             policy_version=case.get("policy_version"),
         )
 
-        # seed: Coordinator giao việc cho Order&Seller Agent
-        queue: list[A2AMessage] = [
-            A2AMessage(self.name, "order_seller_agent", "investigate", ctx.case_id,
-                       {"claimed_order_id": ctx.claimed_order_id})
-        ]
+        # 1) Order & Seller ---------------------------------------------------
+        self._log(ctx, self.name, "order_seller_agent", "investigate",
+                  claimed_order_id=ctx.claimed_order_id)
+        msg = self.order_seller.process(ctx)
+        self._log(ctx, msg.sender, self.name, msg.intent, **msg.payload)
 
-        hops = 0
-        while queue and hops < MAX_HOPS:
-            hops += 1
-            msg = queue.pop(0)
-            self.tracer.log(msg.case_id, msg.sender, msg.recipient, msg.intent, msg.payload)
+        # 2) FAN-OUT song song: Delivery ∥ Payment ----------------------------
+        self._log(ctx, self.name, "delivery_agent", "dispatch")
+        self._log(ctx, self.name, "payment_agent", "dispatch")
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            f_del = ex.submit(self.delivery.process, ctx)
+            f_pay = ex.submit(self.payment.process, ctx)
+            m_del, m_pay = f_del.result(), f_pay.result()
+        self._log(ctx, m_del.sender, self.name, m_del.intent, **m_del.payload)
+        self._log(ctx, m_pay.sender, self.name, m_pay.intent, **m_pay.payload)
 
-            if msg.recipient == self.name:  # đã quay về coordinator -> kết thúc
+        # 3-4) Policy adjudication + Critic-Repair loop ------------------------
+        for _ in range(MAX_ADJUDICATION_ROUNDS):
+            self._log(ctx, self.name, "policy_agent", "adjudicate")
+            m_pol = self.policy.process(ctx)
+            self._log(ctx, m_pol.sender, self.name, m_pol.intent, **m_pol.payload)
+
+            self._log(ctx, self.name, "verifier_agent", "verify")
+            m_ver = self.verifier.process(ctx)
+            self._log(ctx, m_ver.sender, m_ver.recipient, m_ver.intent, **m_ver.payload)
+
+            if m_ver.intent == "final":
                 break
+            # intent == "repair": quay lại policy (đã bật force_deterministic trong ctx)
 
-            agent = self.registry.get(msg.recipient)
-            if agent is None:
-                ctx.notes.append(f"unknown_recipient:{msg.recipient}")
-                break
-            queue.extend(agent.process(msg, ctx))
-
+        # 5) Assemble ---------------------------------------------------------
         output = build_output(ctx)
-        self.tracer.log(ctx.case_id, self.name, "output", "assembled",
-                        {"primary_issue": output["assessment"]["primary_issue"],
-                         "case_status": output["assessment"]["case_status"],
-                         "refund": output["financial_resolution"]["recommended_refund_brl"]})
+        self._log(ctx, self.name, "output", "assembled",
+                  primary_issue=output["assessment"]["primary_issue"],
+                  case_status=output["assessment"]["case_status"],
+                  refund=output["financial_resolution"]["recommended_refund_brl"],
+                  repairs=ctx.repair_count)
         return output
