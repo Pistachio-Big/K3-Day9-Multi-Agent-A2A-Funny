@@ -1,0 +1,6 @@
+# NHÓM FUNNY - K3 Day 9 Multi-Agent A2A
+# Python >= 3.10
+
+pandas>=2.0
+python-dotenv>=1.0
+openai>=1.30          # client OpenAI-compatible: dùng chung cho Groq & OpenRouter
