@@ -55,6 +55,7 @@ def main(argv: list[str]) -> int:
               f"refund={output['financial_resolution']['recommended_refund_brl']}")
 
     tracer.flush()
+    tracer.flush_disagreements()
     tracer.write_metadata(num_cases=n)
     print(f"\nXong {n} case. Output: {config.OUTPUT_DIR} | trace+metadata: {config.LOG_DIR}")
     return 0

@@ -1,16 +1,20 @@
 {
   "team": "FUNNY",
   "framework": "custom-a2a",
-  "provider": "groq",
-  "use_llm": false,
+  "provider": "openrouter",
+  "use_llm": true,
   "agent_models": {
-    "coordinator": "llama-3.1-8b-instant",
-    "order_seller_agent": "llama-3.1-8b-instant",
-    "delivery_agent": "llama-3.1-8b-instant",
-    "payment_agent": "llama-3.1-8b-instant",
-    "policy_agent": "llama-3.1-8b-instant",
-    "verifier_agent": "llama-3.1-8b-instant"
+    "coordinator": "meta-llama/llama-3.1-8b-instruct",
+    "order_seller_agent": "meta-llama/llama-3.1-8b-instruct",
+    "delivery_agent": "meta-llama/llama-3.1-8b-instruct",
+    "payment_agent": "meta-llama/llama-3.1-8b-instruct",
+    "policy_agent": "meta-llama/llama-3.1-8b-instruct",
+    "verifier_agent": "meta-llama/llama-3.1-8b-instruct"
   },
+  "policy_ensemble_models": [
+    "qwen/qwen-2.5-7b-instruct",
+    "meta-llama/llama-3.1-8b-instruct"
+  ],
   "parameter_size_constraint": "<=10B per agent",
   "policy_version": "EC_POLICY_V1",
   "runtime": {
@@ -18,6 +22,6 @@
     "platform": "Windows-10-10.0.26200-SP0"
   },
   "num_cases": 50,
-  "elapsed_seconds": 2.66,
-  "generated_at": "2026-08-05T03:07:32.915052+00:00"
+  "elapsed_seconds": 128.58,
+  "generated_at": "2026-08-05T04:50:44.898481+00:00"
 }

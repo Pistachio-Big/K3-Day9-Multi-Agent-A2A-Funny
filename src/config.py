@@ -65,6 +65,17 @@ AGENT_MODELS = {
     "verifier_agent": _DEFAULT_MODEL,
 }
 
+# ---------------------------------------------------------------------------
+# ENSEMBLE 2 MODEL cho Policy Adjudicator (đều <= 10B).
+# Policy bỏ phiếu: rule deterministic + 2 model dưới đây -> hiệu chỉnh confidence
+# và phát hiện case bất đồng (ghi logging/disagreements.jsonl để soi tay).
+# ---------------------------------------------------------------------------
+_ENSEMBLE = {
+    "openrouter": ["qwen/qwen-2.5-7b-instruct", "meta-llama/llama-3.1-8b-instruct"],
+    "groq": ["qwen-2.5-7b-instruct", "llama-3.1-8b-instant"],
+}
+POLICY_ENSEMBLE_MODELS = _ENSEMBLE.get(LLM_PROVIDER, _ENSEMBLE["openrouter"])
+
 # Tham số suy luận mặc định — muốn quyết định ổn định nên để nhiệt độ thấp.
 LLM_TEMPERATURE = 0.0
 LLM_MAX_TOKENS = 1024

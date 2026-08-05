@@ -37,9 +37,10 @@ def chat(
     *,
     json_mode: bool = False,
     temperature: Optional[float] = None,
+    model: Optional[str] = None,
 ) -> str:
-    """Gọi LLM cho 1 agent. Trả về text (hoặc JSON string nếu json_mode)."""
-    model = config.AGENT_MODELS.get(agent_name, next(iter(config.AGENT_MODELS.values())))
+    """Gọi LLM cho 1 agent. `model` để override (dùng cho ensemble). Trả text/JSON string."""
+    model = model or config.AGENT_MODELS.get(agent_name, next(iter(config.AGENT_MODELS.values())))
     kwargs = {
         "model": model,
         "messages": [
@@ -55,9 +56,9 @@ def chat(
     return resp.choices[0].message.content or ""
 
 
-def chat_json(agent_name: str, system: str, user: str) -> dict:
-    """Như chat() nhưng parse JSON, lỗi thì trả {}."""
+def chat_json(agent_name: str, system: str, user: str, *, model: Optional[str] = None) -> dict:
+    """Như chat() nhưng parse JSON, lỗi thì trả {}. `model` để override (ensemble)."""
     try:
-        return json.loads(chat(agent_name, system, user, json_mode=True))
+        return json.loads(chat(agent_name, system, user, json_mode=True, model=model))
     except (json.JSONDecodeError, Exception):
         return {}

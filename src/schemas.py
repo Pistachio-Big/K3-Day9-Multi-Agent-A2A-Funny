@@ -97,6 +97,9 @@ class CaseContext:
     repair_count: int = 0            # số vòng repair đã chạy
     force_deterministic: bool = False  # Verifier bật khi phát hiện mâu thuẫn -> Policy chỉ dùng Path A
 
+    # --- ensemble Policy: ghi lại khi 2 model LLM bất đồng với rule engine ---
+    disagreement: Optional[dict] = None
+
 
 # ---------------------------------------------------------------------------
 # Output cuối (đúng README mục 6)

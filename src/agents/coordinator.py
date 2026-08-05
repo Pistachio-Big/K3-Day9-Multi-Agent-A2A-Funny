@@ -83,6 +83,10 @@ class Coordinator:
                 break
             # intent == "repair": quay lại policy (đã bật force_deterministic trong ctx)
 
+        # ghi lại case ensemble bất đồng để soi tay
+        if ctx.disagreement:
+            self.tracer.note_disagreement(ctx.disagreement)
+
         # 5) Assemble ---------------------------------------------------------
         output = build_output(ctx)
         self._log(ctx, self.name, "output", "assembled",

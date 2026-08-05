@@ -21,7 +21,18 @@ from . import config
 class Tracer:
     def __init__(self) -> None:
         self.records: list[dict[str, Any]] = []
+        self.disagreements: list[dict[str, Any]] = []
         self._t0 = time.time()
+
+    def note_disagreement(self, record: dict) -> None:
+        self.disagreements.append(record)
+
+    def flush_disagreements(self) -> None:
+        """Ghi các case ensemble bất đồng để soi tay (đòn bẩy sửa điểm)."""
+        config.LOG_DIR.mkdir(parents=True, exist_ok=True)
+        with open(config.LOG_DIR / "disagreements.jsonl", "w", encoding="utf-8") as f:
+            for r in self.disagreements:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
     def log(self, case_id: str, sender: str, recipient: str, msg_type: str, payload: dict) -> None:
         self.records.append({
@@ -48,6 +59,7 @@ class Tracer:
             "provider": config.LLM_PROVIDER,
             "use_llm": config.USE_LLM,
             "agent_models": config.AGENT_MODELS,
+            "policy_ensemble_models": config.POLICY_ENSEMBLE_MODELS,
             "parameter_size_constraint": "<=10B per agent",
             "policy_version": config.POLICY_VERSION,
             "runtime": {
